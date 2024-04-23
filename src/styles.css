@@ -1,0 +1,13 @@
+.App {
+  font-family: sans-serif;
+  text-align: center;
+}
+
+.searchBar .form-control {
+  line-height: 2;
+  font-size: 20px;
+}
+
+#staticBackdrop .modal-body {
+  height: 83vh;
+}
