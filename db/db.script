@@ -1,0 +1,93 @@
+CREATE TABLE IF NOT EXISTS public."Courses"
+(
+    course_id character varying(200)  NOT NULL,
+    year integer NOT NULL,
+    name character varying(200)  NOT NULL,
+    CONSTRAINT "Courses_pkey" PRIMARY KEY (course_id),
+    CONSTRAINT "Courses_course_id_year_name_key" UNIQUE (course_id, year, name)
+)
+
+CREATE TABLE IF NOT EXISTS public."Images"
+(
+    img_id integer NOT NULL DEFAULT nextval('"Images_img_id_seq"'::regclass),
+    users_associated integer[] NOT NULL,
+    name character varying(200)  NOT NULL,
+    tags character varying(200)[]  NOT NULL,
+    description character varying(300)  NOT NULL,
+    image bytea NOT NULL,
+    added_by character varying(100)  NOT NULL,
+    CONSTRAINT "Images_pkey" PRIMARY KEY (img_id)
+)
+
+CREATE TABLE IF NOT EXISTS public."Others"
+(
+    event_id integer NOT NULL,
+    event_name character varying(100)  NOT NULL,
+    date date NOT NULL,
+    CONSTRAINT "Others_pkey" PRIMARY KEY (event_id)
+)
+
+CREATE TABLE IF NOT EXISTS public."Student"
+(
+    student_id integer NOT NULL,
+    year_of_join integer NOT NULL,
+    grades character varying(4)  NOT NULL,
+    branch character varying(200)  NOT NULL,
+    CONSTRAINT "Student_pkey" PRIMARY KEY (student_id)
+)
+
+CREATE TABLE IF NOT EXISTS public."Teacher"
+(
+    teacher_id integer NOT NULL,
+    qualification character varying(100)  NOT NULL,
+    CONSTRAINT "Teacher_pkey" PRIMARY KEY (teacher_id)
+)
+
+CREATE TABLE IF NOT EXISTS public."User"
+(
+    user_id integer NOT NULL,
+    date_of_birth date NOT NULL,
+    name character varying(200)  NOT NULL,
+    phone bigint NOT NULL,
+    mail character varying(200)  NOT NULL,
+    CONSTRAINT "User_pkey" PRIMARY KEY (user_id)
+)
+
+INSERT INTO "User" (user_id, date_of_birth, name, phone, mail)
+VALUES
+  (21108001, '1990-01-01', 'John Doe', 1234567890, 'john@example.com'),
+  (21108002, '1991-02-02', 'Jane Smith', 9876543210, 'jane@example.com'),
+  (21108003, '1992-03-03', 'Alice Johnson', 5555555555, 'alice@example.com'),
+  (21108004, '1995-06-06', 'David Lee', 3333333333, 'david@example.com'),
+  (10108001, '1993-04-04', 'Bob Brown', 1111111111, 'bob@example.com'),
+  (10108002, '1994-05-05', 'Carol Wilson', 2222222222, 'carol@example.com');
+
+INSERT INTO "Teacher" (teacher_id, qualification)
+VALUES
+  (10108001, 'Ph.D. in Computer Science'),
+  (10108002, 'Masters in Electrical Engineering');
+
+
+INSERT INTO "Others" (event_id, event_name, date)
+VALUES
+  (1, 'Tech Fest', '2023-04-15'),
+  (2, 'Cultural Fest', '2023-07-20'),
+  (3, 'Workshop', '2023-10-10');
+
+INSERT INTO "Student" (student_id, year_of_join, grades, branch)
+VALUES
+  (21108001, 2021, 'A', 'Computer Science'),
+  (21108002, 2021, 'B', 'Electrical Engineering'),
+  (21108003, 2022, 'A+', 'Computer Science'),
+  (21108004, 2022, 'A', 'Electrical Engineering');
+
+
+INSERT INTO "Courses" (course_id, year, name) 
+VALUES 
+  ('CS101', 2021, 'Computer System'),
+  ('LA102', 2021, 'Linear Algebra'),
+  ('PL103', 2022, 'Parallel Computing'),
+  ('WN104', 2021, 'Wireless Network'),
+  ('SD105', 2022, 'System Design');
+
+//TO INSERT IN IMAGE TABLE CREATED PYTHON SCRIPT IN SAME DIRECTORY
