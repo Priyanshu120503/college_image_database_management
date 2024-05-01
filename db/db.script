@@ -1,93 +1,374 @@
 CREATE TABLE IF NOT EXISTS public."Courses"
 (
-    course_id character varying(200)  NOT NULL,
+    course_code character varying(100)  NOT NULL,
     year integer NOT NULL,
-    name character varying(200)  NOT NULL,
-    CONSTRAINT "Courses_pkey" PRIMARY KEY (course_id),
-    CONSTRAINT "Courses_course_id_year_name_key" UNIQUE (course_id, year, name)
+    name character varying(100)  NOT NULL,
+    CONSTRAINT "Courses_pkey" PRIMARY KEY (year, course_code)
+)
+
+
+CREATE TABLE IF NOT EXISTS public."User"
+(
+    user_id integer NOT NULL,
+    dob date NOT NULL,
+    name character varying(150) NOT NULL,
+    phone bigint NOT NULL,
+    mail character varying(100) NOT NULL,
+    img_id integer,
+    password character varying(20) NOT NULL,
+    CONSTRAINT "User_pkey" PRIMARY KEY (user_id),
+    CONSTRAINT "User_phone_mail_key" UNIQUE (phone, mail),
+    CONSTRAINT "User_img_id_fkey" FOREIGN KEY (img_id)
+        REFERENCES public."Images" (img_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+        NOT VALID
 )
 
 CREATE TABLE IF NOT EXISTS public."Images"
 (
     img_id integer NOT NULL DEFAULT nextval('"Images_img_id_seq"'::regclass),
-    users_associated integer[] NOT NULL,
+    users_associated integer[],
     name character varying(200)  NOT NULL,
-    tags character varying(200)[]  NOT NULL,
-    description character varying(300)  NOT NULL,
+    description character varying(200) ,
     image bytea NOT NULL,
-    added_by character varying(100)  NOT NULL,
-    CONSTRAINT "Images_pkey" PRIMARY KEY (img_id)
+    added_by integer NOT NULL,
+    CONSTRAINT "Images_pkey" PRIMARY KEY (img_id),
+    CONSTRAINT "Images_added_by_fkey" FOREIGN KEY (added_by)
+        REFERENCES public."User" (user_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+        NOT VALID
 )
 
-CREATE TABLE IF NOT EXISTS public."Others"
+CREATE TABLE IF NOT EXISTS public."Events"
+(
+    event_id integer NOT NULL DEFAULT nextval('"Images_img_id_seq"'::regclass),
+    date date NOT NULL,
+    event_name character varying(100) NOT NULL,
+    CONSTRAINT "Events_pkey" PRIMARY KEY (event_id)
+)
+
+CREATE TABLE IF NOT EXISTS public.course_images
+(
+    course_code character varying(100) NOT NULL,
+    year integer NOT NULL,
+    img_id integer NOT NULL,
+    CONSTRAINT course_images_pkey PRIMARY KEY (course_code, year, img_id),
+    CONSTRAINT course_images_course_code_year_fkey FOREIGN KEY (course_code, year)
+        REFERENCES public."Courses" (course_code, year) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT course_images_img_id_fkey FOREIGN KEY (img_id)
+        REFERENCES public."Images" (img_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+
+CREATE TABLE IF NOT EXISTS public."Event_Images"
 (
     event_id integer NOT NULL,
-    event_name character varying(100)  NOT NULL,
-    date date NOT NULL,
-    CONSTRAINT "Others_pkey" PRIMARY KEY (event_id)
+    img_id integer NOT NULL,
+    CONSTRAINT "Event_Images_pkey" PRIMARY KEY (img_id, event_id),
+    CONSTRAINT "Event_Images_event_id_fkey" FOREIGN KEY (event_id)
+        REFERENCES public."Events" (event_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT "Event_Images_img_id_fkey" FOREIGN KEY (img_id)
+        REFERENCES public."Images" (img_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
 )
 
-CREATE TABLE IF NOT EXISTS public."Student"
+CREATE TABLE IF NOT EXISTS public."Students"
 (
     student_id integer NOT NULL,
+    branch character varying(50) NOT NULL,
     year_of_join integer NOT NULL,
-    grades character varying(4)  NOT NULL,
-    branch character varying(200)  NOT NULL,
-    CONSTRAINT "Student_pkey" PRIMARY KEY (student_id)
+    grades character varying(5) NOT NULL,
+    CONSTRAINT "Students_pkey" PRIMARY KEY (student_id),
+    CONSTRAINT "Students_student_id_fkey" FOREIGN KEY (student_id)
+        REFERENCES public."User" (user_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+        NOT VALID
 )
 
-CREATE TABLE IF NOT EXISTS public."Teacher"
+CREATE TABLE IF NOT EXISTS public.teachers
 (
     teacher_id integer NOT NULL,
-    qualification character varying(100)  NOT NULL,
-    CONSTRAINT "Teacher_pkey" PRIMARY KEY (teacher_id)
+    qualification character varying(200) NOT NULL,
+    course_code character varying(100) NOT NULL,
+    year integer NOT NULL,
+    CONSTRAINT teachers_pkey PRIMARY KEY (teacher_id),
+    CONSTRAINT teachers_course_code_year_fkey FOREIGN KEY (course_code, year)
+        REFERENCES public."Courses" (course_code, year) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT teachers_teacher_id_fkey FOREIGN KEY (teacher_id)
+        REFERENCES public."User" (user_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+        NOT VALID
 )
 
-CREATE TABLE IF NOT EXISTS public."User"
+CREATE TABLE IF NOT EXISTS public.student_courses
 (
-    user_id integer NOT NULL,
-    date_of_birth date NOT NULL,
-    name character varying(200)  NOT NULL,
-    phone bigint NOT NULL,
-    mail character varying(200)  NOT NULL,
-    CONSTRAINT "User_pkey" PRIMARY KEY (user_id)
+    student_id integer NOT NULL,
+    course_code character varying(100) NOT NULL,
+    year integer NOT NULL,
+    CONSTRAINT student_courses_pkey PRIMARY KEY (student_id, course_code, year),
+    CONSTRAINT student_courses_course_code_year_fkey FOREIGN KEY (course_code, year)
+        REFERENCES public."Courses" (course_code, year) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
 )
 
-INSERT INTO "User" (user_id, date_of_birth, name, phone, mail)
-VALUES
-  (21108001, '1990-01-01', 'John Doe', 1234567890, 'john@example.com'),
-  (21108002, '1991-02-02', 'Jane Smith', 9876543210, 'jane@example.com'),
-  (21108003, '1992-03-03', 'Alice Johnson', 5555555555, 'alice@example.com'),
-  (21108004, '1995-06-06', 'David Lee', 3333333333, 'david@example.com'),
-  (10108001, '1993-04-04', 'Bob Brown', 1111111111, 'bob@example.com'),
-  (10108002, '1994-05-05', 'Carol Wilson', 2222222222, 'carol@example.com');
-
-INSERT INTO "Teacher" (teacher_id, qualification)
-VALUES
-  (10108001, 'Ph.D. in Computer Science'),
-  (10108002, 'Masters in Electrical Engineering');
+CREATE TABLE IF NOT EXISTS public."Image_tags"
+(
+    img_id integer NOT NULL,
+    tag character varying(100) NOT NULL,
+    CONSTRAINT "Image_tags_pkey" PRIMARY KEY (img_id, tag),
+    CONSTRAINT "Image_tags_img_id_fkey" FOREIGN KEY (img_id)
+        REFERENCES public."Images" (img_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
 
 
-INSERT INTO "Others" (event_id, event_name, date)
-VALUES
-  (1, 'Tech Fest', '2023-04-15'),
-  (2, 'Cultural Fest', '2023-07-20'),
-  (3, 'Workshop', '2023-10-10');
-
-INSERT INTO "Student" (student_id, year_of_join, grades, branch)
-VALUES
-  (21108001, 2021, 'A', 'Computer Science'),
-  (21108002, 2021, 'B', 'Electrical Engineering'),
-  (21108003, 2022, 'A+', 'Computer Science'),
-  (21108004, 2022, 'A', 'Electrical Engineering');
-
-
-INSERT INTO "Courses" (course_id, year, name) 
+INSERT INTO "Courses" (course_code, year, name) 
 VALUES 
-  ('CS101', 2021, 'Computer System'),
-  ('LA102', 2021, 'Linear Algebra'),
-  ('PL103', 2022, 'Parallel Computing'),
-  ('WN104', 2021, 'Wireless Network'),
-  ('SD105', 2022, 'System Design');
+  ('R4IT2009T', 2021, 'Operating Systems'),
+  ('R4IT3005S', 2022, 'Complier Design'),
+  ('R4IT3012T', 2021, 'Wireless Networks'),
+  ('R4IT3013T', 2022, 'Parallel Computing'),
+  ('R4MA2007S', 2021, 'Linear Algebra'),
+  ('R4IT2010T',2022,'Database Management Systems');
 
-//TO INSERT IN IMAGE TABLE CREATED PYTHON SCRIPT IN SAME DIRECTORY
+//STUDENTS
+INSERT INTO "User" (user_id, name, dob, phone, mail,password)
+VALUES
+    (211080051, 'Nikhil Soni', '2003-03-13', 1234567890, 'niksoni12@gmail.com','123456789'),
+    (211080050, 'Akshay Potkule', '2003-11-23', 9012345678, 'akspot23@gmail.com','123456789'),
+    (211070072, 'Netra Patel', '2003-09-12', 2345678901, 'netpat34@gmail.com','123456789'),
+    (211080065, 'Keyur Doshi', '2003-12-10', 3456789012, 'keydos45@gmail.com','123456789'),
+    (211080035, 'Vyomesh Gala', '2002-10-14', 4567890123, 'vyogal56@gmail.com','123456789'),
+    (211080037, 'Jinesh Shah', '2004-08-06', 5678901234, 'jinsha67@gmail.com','123456789'),
+    (211080038, 'Priyanshu Rathore', '2003-06-28', 6789012345, 'prirat78@gmail.com','123456789'),
+    (211080043, 'Karan Choksey', '2005-12-13', 7890123456, 'karcho89@gmail.com','123456789'),
+    (211050023, 'Rushi Jani', '2003-05-05', 8901234567, 'rusjan90@gmail.com','123456789');
+
+//TEACHERS
+INSERT INTO "User" (user_id,dob,name,phone,mail,password)
+VALUES
+	(10110001,'1995-02-24','Shivani Supe',7531590123,'shisup12@gmail.com','123456789'),
+	(10110002,'1998-07-04','Mahesh Shirole',1472583690,'mahshi23@gmail.com','123456789'),
+	(10110003,'1988-03-14','Sandeep Udmale',8523691470,'sanudm34@gmail.com','123456789'),
+	(10110004,'1996-10-25','Sagar Sawool',9654781230,'sagsaw45@gmail.com','123456789'),
+	(10110005,'1987-11-30','Sandeep Shingade',3012457896,'sanshi56@gmail.com','123456789'),
+	(10110006,'1993-06-06','Mansi Kulkarni',7413698520,'mankul67@gmail.com','123456789');
+
+///TO INSERT IN IMAGES TABLE USING PYTHON SCRIPT
+(211080051, 'Hackathon Winner', 'Won 1st prize at College level Hackathon', psycopg2.Binary(image_data),[211070072,211080050,211080065])
+(211080065, 'Keyur Doshi', 'Profile Photo', psycopg2.Binary(image_data))
+(211070072, 'Netra Patel', 'Profile Photo', psycopg2.Binary(image_data))
+(211080050, 'Akshay Potkule', 'Profile Photo', psycopg2.Binary(image_data))
+(211080051, 'Nikhil Soni', 'Profile Photo', psycopg2.Binary(image_data))
+(211080037, 'Jinesh Shah', 'Profile Photo', psycopg2.Binary(image_data))
+(211080038, 'Priyanshu Rathore', 'Profile Photo', psycopg2.Binary(image_data))
+(211080035, 'Vyomesh Gala', 'Profile Photo', psycopg2.Binary(image_data))
+(211050023, 'Rushi Jani', 'Profile Photo', psycopg2.Binary(image_data))
+(211080043, 'Karan Choksey', 'Profile Photo', psycopg2.Binary(image_data))
+(211050023, 'Industrial Visit', 'Group Photo With My Gang', psycopg2.Binary(image_data),[211080037,211080035,211080038,211080043])
+
+INSERT INTO "Students" (student_id,branch,year_of_join,grades)
+VALUES
+	(211080051,'IT',2021,'BB'),
+	(211080050,'IT',2021,'AB'),
+	(211070072,'CS',2021,'BC'),
+	(211080065,'IT',2021,'CC'),
+	(211080037,'IT',2021,'AB'),
+	(211080035,'IT',2021,'BC'),
+	(211080038,'IT',2021,'AA'),
+	(211080043,'IT',2021,'BC'),
+	(211050023,'EXTC',2021,'BB');
+
+
+INSERT INTO "teachers" (teacher_id,qualification,course_code,year)
+VALUES
+	(10110001,'MBA , Google Certified Educator','R4IT3005S',2022),
+	(10110002,'MSc in AI/ML , BSc IT','R4IT2009T',2021),
+	(10110003,'Microsoft Innovative Educator, BSc IT','R4IT3012T',2021),
+	(10110004,'Certified EdTech Coach','R4IT3013T',2022),
+	(10110005,'BSc IT , PhD in Data Analysis','R4MA2007S',2021),
+    (10110006,'MTech Computer Engineering','R4IT2010T',2022);
+
+
+INSERT INTO "student_courses" (student_id,course_code,year)
+VALUES
+	(211080035,'R4IT2009T',2021),
+	(211080035,'R4IT3013T',2022),
+	(211080035,'R4IT3012T',2021),
+	(211080037,'R4IT3012T',2021),
+	(211080038,'R4IT3013T',2022),
+	(211080043,'R4IT2009T',2021),
+	(211080050,'R4IT3012T',2021),
+	(211080051,'R4IT3013T',2022),
+	(211080065,'R4IT3005S',2022),
+	(211070072,'R4IT2009T',2021),
+	(211050023,'R4MA2007S',2021),
+	(211080038,'R4IT2009T',2021),
+	(211080037,'R4IT2009T',2021),
+    (211080035,'R4IT2010T',2022),
+	(211080037,'R4IT2010T',2022),
+	(211080038,'R4IT2010T',2022);
+
+
+INSERT INTO "Events" (date,event_name)
+VALUES
+	('2022-11-29','College Hackathon'),
+	('2021-05-09','Industrial Visit'),
+	('2022-12-30','Pratibimb'),
+	('2021-05-18','Enthusia Marathon'),
+	('2022-09-19','Technovanza TechFest');
+
+//INSERT INTO IMAGES TABLE IMAGES OF TEACHERS
+(10110001, 'Shivani Supe', 'Profile Photo', psycopg2.Binary(image_data))
+(10110002, 'Mahesh Shirole', 'Profile Photo', psycopg2.Binary(image_data))
+(10110003, 'Sandeep Udmale', 'Profile Photo', psycopg2.Binary(image_data))
+(10110004, 'Sagar Rawool', 'Profile Photo', psycopg2.Binary(image_data))
+(10110005, 'Sandeep Shingade', 'Profile Photo', psycopg2.Binary(image_data))
+(10110006, 'Mansi Kulkarni', 'Profile Photo', psycopg2.Binary(image_data))
+
+///INSERTING EVENTS IMAGES INTO Database
+(211080037, 'Technovanza Science Exhibition', 'Technovanza Presents You Biggest Science And Technology Exhibition', psycopg2.Binary(image_data))
+(211080037, 'Enthusia Marahton 2k24', 'Excerise And Stay Healthy And Happy Everyday', psycopg2.Binary(image_data))
+(211080037, 'Pratibimb : Cultural Fest', 'Exclusively Organized for Final Year', psycopg2.Binary(image_data))
+
+INSERT INTO "Event_Images" (event_id,img_id)
+VALUES
+	(13,6),
+	(14,12),
+	(15,24),
+	(16,25),
+	(17,26);
+
+
+///To update the profile photo of the users
+UPDATE "User" SET img_id = 2 WHERE user_id = 211080051;
+UPDATE "User" SET img_id = 3 WHERE user_id = 211080050;
+UPDATE "User" SET img_id = 4 WHERE user_id = 211070072;
+UPDATE "User" SET img_id = 5 WHERE user_id = 211080065;
+UPDATE "User" SET img_id = 7 WHERE user_id = 211080037;
+UPDATE "User" SET img_id = 8 WHERE user_id = 211080035;
+UPDATE "User" SET img_id = 9 WHERE user_id = 211080038;
+UPDATE "User" SET img_id = 10 WHERE user_id = 211080043;
+UPDATE "User" SET img_id = 11 WHERE user_id = 211050023;
+
+
+
+//TO INSERT IMAGES OF COURSES INTO THE DATABASE
+(211080037, 'DBMS1', 'STUDY1', psycopg2.Binary(image_data))
+(211080037, 'DBMS2', 'STUDY2', psycopg2.Binary(image_data))
+(211080037, 'DBMS3', 'STUDY3', psycopg2.Binary(image_data))
+(211080037, 'DBMS4', 'STUDY4', psycopg2.Binary(image_data))
+(211080037, 'LA1', 'STUDY1', psycopg2.Binary(image_data))
+(211080037, 'LA2', 'STUDY2', psycopg2.Binary(image_data))
+(211080037, 'LA3', 'STUDY3', psycopg2.Binary(image_data))
+(211080037, 'OS1', 'STUDY1', psycopg2.Binary(image_data))
+(211080037, 'OS2', 'STUDY2', psycopg2.Binary(image_data))
+(211080037, 'PC1', 'STUDY1', psycopg2.Binary(image_data))
+(211080037, 'PC2', 'STUDY2', psycopg2.Binary(image_data))
+(211080037, 'WN1', 'STUDY1', psycopg2.Binary(image_data))
+(211080037, 'WN2', 'STUDY2', psycopg2.Binary(image_data))
+(211080037, 'WN3', 'STUDY3', psycopg2.Binary(image_data))
+(211080037, 'CD1', 'STUDY1', psycopg2.Binary(image_data))
+(211080037, 'CD2', 'STUDY2', psycopg2.Binary(image_data))
+
+
+INSERT INTO "course_images" (course_code,year,img_id)
+VALUES
+	('R4IT2010T',2022,27),
+	('R4IT2010T',2022,28),
+	('R4IT2010T',2022,29),
+	('R4IT2010T',2022,30),
+	('R4MA2007S',2021,31),
+	('R4MA2007S',2021,32),
+	('R4MA2007S',2021,33),
+	('R4IT2009T',2021,34),
+	('R4IT2009T',2021,35),
+	('R4IT3013T',2022,36),
+	('R4IT3013T',2022,37),
+	('R4IT3012T',2021,38),
+	('R4IT3012T',2021,39),
+	('R4IT3012T',2021,40),
+	('R4IT3005S',2022,41),
+	('R4IT3005S',2022,42);
+	
+
+INSERT INTO "Image_tags" (img_id,tag)
+VALUES
+	(6,'Hackathon'),
+	(6,'Winner'),
+	(6,'College'),
+	(12,'Industrial Visit'),
+	(12,'Visit'),
+	(12,'Group Photo'),
+	(12,'Gang'),
+	(12,'Ahmedabad'),
+	(24,'Pratibimb'),
+	(24,'Cultural Fest'),
+	(24,'Final Year'),
+	(24,'Exclusively'),
+	(25,'Enthusia'),
+	(25,'Marathon'),
+	(25,'Exercise'),
+	(25,'Stay Healthy'),
+	(25,'2k24'),
+	(26,'Technovanza'),
+	(26,'TechFest'),
+	(26,'Exhibition'),
+	(26,'Science'),
+	(26,'Technology'),
+	(27,'Database'),
+	(27,'DBMS'),
+	(28,'Database'),
+	(28,'DBMS'),
+	(29,'Database'),
+	(29,'DBMS'),
+	(30,'Database'),
+	(30,'DBMS'),
+	(31,'Linear'),
+	(31,'Algebra'),
+	(31,'LA'),
+	(32,'Linear'),
+	(32,'Algebra'),
+	(32,'LA'),
+	(33,'Linear'),
+	(33,'Algebra'),
+	(33,'LA'),
+	(34,'Operating'),
+	(34,'OS'),
+	(35,'Operating'),
+	(35,'OS'),
+	(36,'Parallel'),
+	(36,'Computing'),
+	(36,'PC'),
+	(37,'Parallel'),
+	(37,'Computing'),
+	(37,'PC'),
+	(38,'WN'),
+	(38,'Wireless'),
+	(38,'Networks'),
+	(39,'WN'),
+	(39,'Wireless'),
+	(39,'Networks'),
+	(40,'WN'),
+	(40,'Wireless'),
+	(40,'Networks'),
+	(41,'Complier'),
+	(41,'Design'),
+	(41,'CD'),
+	(42,'Complier'),
+	(42,'Design'),
+	(42,'CD');
