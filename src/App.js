@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import LoginPage from "./Components/LoginPage";
 import MainPage from "./Components/MainPage";
 import Layout from "./Components/Layout";
@@ -9,7 +9,7 @@ import "./styles.css";
 const App = () => {
   const [loggedInUser, setLoggedInUser] = useState(null);
 
-  const [images] = useState({
+  const [images, setImages] = useState({
     1: {
       id: 1,
       url: "image1.jpg",
@@ -58,6 +58,14 @@ const App = () => {
     // Store the logged-in user
     setLoggedInUser(username);
   };
+
+  // useEffect(() => {
+  //   fetch("http://localhost:3000/images")
+  //     .then((res) => res.json())
+  //     .then((json) => {
+  //       setImages(json);
+  //     })
+  // }, []);
 
   return (
     <BrowserRouter>

@@ -11,6 +11,10 @@
 # production
 /build
 
+/images
+/db
+/public/test.html
+
 # misc
 .DS_Store
 .env.local

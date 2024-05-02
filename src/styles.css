@@ -1,6 +1,23 @@
 .App {
   font-family: sans-serif;
   text-align: center;
+  background-color: #f2e0d9;
+  background-image: url("https://www.transparenttextures.com/patterns/always-grey.png");
+}
+
+.main-page, html, body {
+  /* background-color: #f2e0d9; */
+  background-color: #f2e4df;
+  background-image: url("https://www.transparenttextures.com/patterns/always-grey.png");
+}
+
+.folder > div:hover {
+  box-shadow: 2px 2px gray;
+}
+
+.login {
+  width: 500px;
+  margin-top: 130px;
 }
 
 .searchBar .form-control {
@@ -8,6 +25,24 @@
   font-size: 20px;
 }
 
-#staticBackdrop .modal-body {
+#imageModal .modal-body {
   height: 83vh;
+}
+
+#imageAddForm .imgArea {
+  min-height: 200px;
+  max-height: 250px;
+}
+
+#imageAddForm .imgArea img {
+  max-width: 100%;
+  max-height: 250px;
+  display: block;
+  margin: auto; 
+}
+
+.add_icon {
+  position: absolute;
+  bottom: 30px;
+  right: 50px;
 }

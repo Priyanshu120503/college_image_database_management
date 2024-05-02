@@ -7,7 +7,7 @@ const ImageModal = ({ buttonRef, image }) => {
         type="button"
         class="btn btn-primary"
         data-bs-toggle="modal"
-        data-bs-target="#staticBackdrop"
+        data-bs-target="#imageModal"
         ref={buttonRef}
         hidden
       >
@@ -16,7 +16,7 @@ const ImageModal = ({ buttonRef, image }) => {
 
       <div
         class="modal fade"
-        id="staticBackdrop"
+        id="imageModal"
         data-bs-backdrop="static"
         data-bs-keyboard="false"
         tabindex="-1"
@@ -26,7 +26,7 @@ const ImageModal = ({ buttonRef, image }) => {
         <div class="modal-dialog modal-dialog-centered modal-xl">
           <div class="modal-content">
             <div class="modal-header">
-              <h1 class="modal-title fs-5" id="staticBackdropLabel">
+              <h1 class="modal-title fs-5">
                 Image Viewer
               </h1>
               <button

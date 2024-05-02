@@ -3,12 +3,12 @@ import { Link } from "react-router-dom";
 
 const Folders = ({ myName, folderNames }) => {
   return (
-    <div className="w-50 mx-auto my-5 border border-1 p-2">
+    <div className="w-50 mx-auto my-5 border border-1 border-dark-subtle p-2">
       <h2>{myName}</h2>
       <div className="d-flex justify-content-center flex-wrap">
         {folderNames.map((folder) => (
           <Link
-            className="mx-2 fs-4 text-dark text-wrap"
+            className="mx-2 fs-4 text-dark text-wrap folder"
             style={{ textDecoration: "none" }}
             to={window.location.pathname + "/" + folder}
           >

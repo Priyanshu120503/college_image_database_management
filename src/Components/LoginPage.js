@@ -19,26 +19,33 @@ const LoginPage = ({ onLogin }) => {
   };
 
   return (
-    <div>
-      <h2>Login</h2>
-      <div>
-        <label>Username:</label>
+    <div className="container-fluid mx-auto bg-primary-subtle px-5 py-3 text-center login">
+      <h2 className="mb-5"><u>Login</u></h2>
+      <form onSubmit={handleLogin}>
+      <div class="mb-3">
+        <label for="InputEmail" class="form-label">Email address</label>
         <input
-          type="text"
-          value={username}
+          type="email" 
+          class="form-control" 
+          id="InputEmail" 
           onChange={(e) => setUsername(e.target.value)}
-        />
+          value={username}
+          aria-describedby="emailHelp" />
       </div>
-      <div>
-        <label>Password:</label>
-        <input
-          type="password"
-          value={password}
+      <div class="mb-3">
+        <label for="InputPassword" class="form-label">Password</label>
+        <input 
+          type="password" 
           onChange={(e) => setPassword(e.target.value)}
+          value={password}
+          className="form-control" 
+          id="InputPassword"
         />
       </div>
-      <button onClick={handleLogin}>Login</button>
-    </div>
+      <button type="submit" class="btn btn-primary">Login</button>
+    </form>
+  </div>
+
   );
 };
 

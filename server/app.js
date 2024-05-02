@@ -1,18 +1,18 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const { Pool } = require("pg");
-const multer = require('multer');
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+// const multer = require('multer');
+// const storage = multer.memoryStorage();
+// const upload = multer({ storage: storage });
 
 const app = express();
-const port = 3000;
+const port = 4000;
 
 const pool = new Pool({
-  user: "username",
+  user: "postgres",
   host: "localhost",
-  database: "database_name",
-  password: "password",
+  database: "College_Image_Database",
+  password: "$Jr+N23l#sc(vd",
   port: 5432,
 });
 
@@ -77,11 +77,11 @@ app.get("/courses/:some_course", async (req, res) => {
   }
 });
 
-app.get("/course/:some_course/:year", async (req, res) => {
+app.get("/courses/:some_course/:year", async (req, res) => {
   const { some_course, year } = req.params;
   try {
     const imagesQuery = await pool.query(
-      'SELECT * FROM "Images" WHERE users_associated = $1 AND tags = $2',
+      'SELECT * FROM "Images" WHERE img_id in (SELECT img_id FROM "course_images" NATURAL JOIN "Courses" WHERE name=$1 AND year=$2);',
       [some_course, year]
     );
     const images = imagesQuery.rows;
@@ -95,7 +95,7 @@ app.get("/course/:some_course/:year", async (req, res) => {
 app.get("/events", async (req, res) => {
   try {
     const eventsQuery = await pool.query(
-      'SELECT DISTINCT event_name FROM "Others"'
+      'SELECT DISTINCT event_name FROM "Events"'
     );
     const events = eventsQuery.rows.map((row) => row.event_name);
     res.json(events);
@@ -109,7 +109,7 @@ app.get("/events/:name", async (req, res) => {
   const { name } = req.params;
   try {
     const yearsQuery = await pool.query(
-      'SELECT DISTINCT EXTRACT(YEAR FROM date) AS year FROM "Others" WHERE event_name = $1',
+      'SELECT DISTINCT EXTRACT(YEAR FROM date) AS year FROM "Events" WHERE event_name = $1',
       [name]
     );
     const years = yearsQuery.rows.map((row) => row.year);
@@ -205,60 +205,60 @@ app.get("/classes/:year/:dep", async (req, res) => {
 //   }
 // });
 
-app.post('/courses/:course/:year', upload.single('image'), async (req, res) => {
-  try {
-    const course = req.params.course;
-    const year = req.params.year;
-    const image = req.file.buffer;
-    const query = `
-      INSERT INTO "Images" (course, year, image)
-      VALUES ($1, $2, $3)
-    `;
-    await pool.query(query, [course, year, image]);
+// app.post('/courses/:course/:year', upload.single('image'), async (req, res) => {
+//   try {
+//     const course = req.params.course;
+//     const year = req.params.year;
+//     const image = req.file.buffer;
+//     const query = `
+//       INSERT INTO "Images" (course, year, image)
+//       VALUES ($1, $2, $3)
+//     `;
+//     await pool.query(query, [course, year, image]);
 
-    res.status(201).json({ message: 'Image added to course successfully' });
-  } catch (error) {
-    console.error('Error adding image to course:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+//     res.status(201).json({ message: 'Image added to course successfully' });
+//   } catch (error) {
+//     console.error('Error adding image to course:', error);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// });
 
-app.post('/events/:name/:year', upload.single('image'), async (req, res) => {
-  try {
-    const eventName = req.params.name;
-    const year = req.params.year;
-    const image = req.file.buffer;
-    const query = `
-      INSERT INTO "Images" (event_name, year, image)
-      VALUES ($1, $2, $3)
-    `;
-    await pool.query(query, [eventName, year, image]);
+// app.post('/events/:name/:year', upload.single('image'), async (req, res) => {
+//   try {
+//     const eventName = req.params.name;
+//     const year = req.params.year;
+//     const image = req.file.buffer;
+//     const query = `
+//       INSERT INTO "Images" (event_name, year, image)
+//       VALUES ($1, $2, $3)
+//     `;
+//     await pool.query(query, [eventName, year, image]);
 
-    res.status(201).json({ message: 'Image added to event successfully' });
-  } catch (error) {
-    console.error('Error adding image to event:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+//     res.status(201).json({ message: 'Image added to event successfully' });
+//   } catch (error) {
+//     console.error('Error adding image to event:', error);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// });
 
-// Endpoint to add image to a class for a specific year and department
-app.post('/classes/:year/:dep', upload.single('image'), async (req, res) => {
-  try {
-    const year = req.params.year;
-    const department = req.params.dep;
-    const image = req.file.buffer;
-    const query = `
-      INSERT INTO "Images" (year, department, image)
-      VALUES ($1, $2, $3)
-    `;
-    await pool.query(query, [year, department, image]);
+// // Endpoint to add image to a class for a specific year and department
+// app.post('/classes/:year/:dep', upload.single('image'), async (req, res) => {
+//   try {
+//     const year = req.params.year;
+//     const department = req.params.dep;
+//     const image = req.file.buffer;
+//     const query = `
+//       INSERT INTO "Images" (year, department, image)
+//       VALUES ($1, $2, $3)
+//     `;
+//     await pool.query(query, [year, department, image]);
 
-    res.status(201).json({ message: 'Image added to class successfully' });
-  } catch (error) {
-    console.error('Error adding image to class:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+//     res.status(201).json({ message: 'Image added to class successfully' });
+//   } catch (error) {
+//     console.error('Error adding image to class:', error);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// });
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
