@@ -4,58 +4,29 @@ import Folders from "./Folders";
 import ImagesSection from "./ImagesSection";
 import { useParams } from "react-router-dom";
 
-const MainPage = ({ username, type, myName, contents, images }) => {
+const MainPage = ({ user, type }) => {
   const [searchResults, setSearchResults] = useState([]);
+  const params = Object.values(useParams());
 
   const handleSearch = (filteredResults) => {
     setSearchResults(filteredResults);
   };
 
-  // useEffect(() => {
-  //   if (myName === "") {
-  //     if (type === "folder") {
-  //     //   const foldName = Object.values(useParams())[0];
-  //       myName = t[0];
-  //       contents = Object.keys(contents[myName]);
-  //     } else {
-  //       const [a, b] = t;
-  //       myName = a + " --> " + b;
-  //       contents = Object.values(contents[a][b]);
-  //     }
-  //   } else {
-  //     fetch("https://localhost:3000/" + myName.toLowerCase())
-  //       .then((res) => res.json())
-  //       .then((json) => {
-          
-  //       })
-       
-
-  //   }
-  // }, []);
-
-  const t = Object.values(useParams());
-  if (myName === "") {
-    if (type === "folder") {
-    //   const foldName = Object.values(useParams())[0];
-      myName = t[0];
-      contents = Object.keys(contents[myName]);
-    } else {
-      const [a, b] = t;
-      myName = a + " --> " + b;
-      contents = Object.values(contents[a][b]);
-    }
-  }
-
   return (
     <div className="container-fluid main-page">
-      <h2>Welcome, {username}!</h2>
-      <SearchBar images={images} onSearch={handleSearch} />
+      <h2>{user?.name}</h2>
+      <SearchBar onSearch={handleSearch} />
       {searchResults.length > 0 ? (
-        <ImagesSection myName="Search Results" images={searchResults} showAddButton={false} />
+        <ImagesSection myName="Search Results" searchedImages={searchResults} showAddButton={false} />
       ) : type === "folder" ? (
-        <Folders myName={myName} folderNames={contents} />
+        <Folders params={params} user={user} />
       ) : (
-        <ImagesSection myName={myName} images={contents} showAddButton={true} />
+        <ImagesSection 
+          myName="" 
+          params={params} 
+          user={user} 
+          showAddButton={user.user_type === "teacher" && params[0] === "Courses"} 
+        />
       )}
     </div>
   );

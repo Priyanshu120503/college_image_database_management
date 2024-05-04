@@ -1,16 +1,52 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
-const Folders = ({ myName, folderNames }) => {
+const Folders = ({params, user}) => {
+  const [myName, setMyName] = useState("");
+  const [folderNames, setFolderNames] = useState([]);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if(params.length === 0) {
+      setMyName("Home");
+      setFolderNames(["Courses", "Classes", "Events"]);
+    } else if(params.length === 1) {
+      setMyName(params[0]);
+
+      fetch("http://localhost:4000/"+params[0]+((params[0] === "Courses") ? ("/list/"+user.user_type + "/" + user.user_id):""))
+        .then((res) => {
+          if(!res.ok)
+            throw new Error('Failed to load');
+          return res.json()
+        })
+        .then((res) => {setFolderNames(res);})
+        .catch((e) => alert(e));     
+    } else if(params.length === 2) {
+      setMyName(params[0] + " --> " + params[1]);
+
+      fetch("http://localhost:4000/" + params[0]  + "/"+ params[1])
+        .then((res) => {
+          if(!res.ok)
+            throw new Error('Failed to load');
+          return res.json()
+        })
+        .then((res) => {setFolderNames(res);})
+        .catch((e) => {
+          navigate("/main/" + params[0]);
+          alert(e)});
+    }
+  }, [params]);
+
   return (
-    <div className="w-50 mx-auto my-5 border border-1 border-dark-subtle p-2">
+    <div className="main-container w-50 mx-auto mt-5 mb-2 border border-1 border-dark-subtle p-2">
       <h2>{myName}</h2>
       <div className="d-flex justify-content-center flex-wrap">
-        {folderNames.map((folder) => (
+        {folderNames.map((folder, idx) => (
           <Link
             className="mx-2 fs-4 text-dark text-wrap folder"
             style={{ textDecoration: "none" }}
             to={window.location.pathname + "/" + folder}
+            key={idx}
           >
             <div
               className="bg-body-secondary px-3 pb-1 mx-3 my-3 rounded d-flex align-items-center justify-content-around"

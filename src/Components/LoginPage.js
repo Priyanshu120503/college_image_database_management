@@ -4,15 +4,35 @@ import { useNavigate } from "react-router-dom";
 const LoginPage = ({ onLogin }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  
   const navigate = useNavigate();
 
-  const handleLogin = () => {
+  const handleLogin = (e) => {
+    e.preventDefault();
     // Perform authentication logic here
-    // For simplicity, let's assume login is successful if username and password are not empty
     if (username.trim() !== "" && password.trim() !== "") {
-      // Call the onLogin function passed from the parent component
-      onLogin(username);
-      navigate("/main");
+      fetch("http://localhost:4000/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({email: username, password: password})
+      })
+      .then(response => response.json())
+      .then(data => {
+          if (data.success) {
+            onLogin(data.user);
+            navigate("/main");
+          } else {
+            alert("Login failed. Please check your username and password.");
+            setPassword("");
+            setUsername("");
+          }
+      })
+      .catch(error => {
+          console.error('Error:', error);
+      });
+      
     } else {
       alert("Username and password are required");
     }

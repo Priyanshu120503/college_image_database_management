@@ -1,18 +1,17 @@
 const express = require("express");
 const bodyParser = require("body-parser");
+const cors = require("cors");
 const { Pool } = require("pg");
-// const multer = require('multer');
-// const storage = multer.memoryStorage();
-// const upload = multer({ storage: storage });
 
 const app = express();
+app.use(cors());
 const port = 4000;
 
 const pool = new Pool({
   user: "postgres",
   host: "localhost",
   database: "College_Image_Database",
-  password: "$Jr+N23l#sc(vd",
+  password: "password",
   port: 5432,
 });
 
@@ -26,6 +25,42 @@ pool.connect((err, client, release) => {
   console.log("Connected to the database successfully");
   release();
 });
+
+function byteArrayToBase64(byteArray) {
+  // Convert byte array to string
+  const binaryString = byteArray.reduce((acc, byte) => {
+    return acc + String.fromCharCode(byte);
+  }, '');
+
+  // Convert string to Base64
+  return btoa(binaryString);
+}
+
+function base64ToByteArray(base64String) {
+  // Decode the base64 string
+  const binaryString = atob(base64String);
+
+  // Create a Uint8Array to hold the byte values
+  const byteArray = new Uint8Array(binaryString.length);
+
+  // Iterate through each character of the binary string and store its char code in the byte array
+  for (let i = 0; i < binaryString.length; i++) {
+      byteArray[i] = binaryString.charCodeAt(i);
+  }
+
+  return byteArray;
+}
+
+function combineTagsToAnArray(tags) {
+  const tagObj = {}
+  tags.forEach((tag) => {
+    if(!(tag.img_id in tagObj))
+      tagObj[tag.img_id] = [];
+    tagObj[tag.img_id].push(tag.tag);
+  });
+
+  return tagObj;
+}
 
 // app.get('/image/:id', async (req, res) => {
 //   try {
@@ -49,11 +84,165 @@ pool.connect((err, client, release) => {
 //   }
 // });
 
-app.get("/courses", async (req, res) => {
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
   try {
-    const coursesQuery = await pool.query(
-      'SELECT DISTINCT name FROM "Courses"'
+    const userQuery = await pool.query(
+      'SELECT * FROM "User" WHERE mail=$1 AND password=$2',
+      [email, password]
     );
+    const user = userQuery.rows;
+    if (user.length === 1) {
+      let moreDetails;
+      let user_type = 'teacher';
+
+      // Search in teacher table
+      const moreQuery = await pool.query(
+        'SELECT * FROM "teachers" WHERE teacher_id=$1',
+        [user[0].user_id]
+      );
+      moreDetails = moreQuery.rows;
+      
+      // Search in student table
+      if(moreDetails.length !== 1) {
+        user_type = 'student';
+        const moreQuery = await pool.query(
+          'SELECT * FROM "Students" WHERE student_id=$1',
+          [user[0].user_id]
+        );
+        moreDetails = moreQuery.rows;
+      }
+
+      res.json({ success: true, user: {...user[0], ...moreDetails[0], user_type} });
+    } else {
+      res.json({ success: false });
+    }
+  } catch (error) {
+    console.error("Error fetching courses:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }  
+});
+
+app.get("/user_img/:id", async(req, res) => {
+  const { id } = req.params;
+  try {
+    const userImgQuery = await pool.query(
+      'SELECT * FROM "Images" WHERE img_id=(SELECT img_id FROM "User" WHERE user_id=$1);',
+      [id]
+    );
+    const userImg = userImgQuery.rows;
+
+    let user;
+    const userQuery = await pool.query(
+      'SELECT * FROM "User" INNER JOIN "teachers" ON user_id=teacher_id WHERE user_id=$1;',
+      [id]
+    );
+    user = userQuery.rows;
+
+    if(user.length === 0) {
+      const userQuery = await pool.query(
+        'SELECT * FROM "User" INNER JOIN "Students" ON user_id=student_id WHERE user_id=$1;',
+        [id]
+      );
+      user = userQuery.rows;
+    }
+
+    const tagQuery = await pool.query(
+      'SELECT * FROM "Image_tags" WHERE img_id=(SELECT img_id FROM "User" WHERE user_id=$1);',
+      [id]
+    );
+    const tags = tagQuery.rows.map((row) => row.tags);
+    if (userImg.length === 1) {
+      userImg[0].image = byteArrayToBase64(userImg[0].image);
+      userImg[0].tags = tags;
+
+      const result = {...userImg[0], ...user[0]};
+      res.json(result);
+    } else {
+      res.status(500);
+    }
+  } catch (error) {
+    console.error("Error fetching courses:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }  
+});
+
+app.get("/find_imgs/:query", async(req, res) => {
+  const { query } = req.params;
+  try {
+    const imgQuery = await pool.query(
+      'SELECT * FROM "Images" WHERE LOWER(name) LIKE $1 UNION\
+      SELECT * FROM "Images" WHERE img_id in (SELECT DISTINCT img_id FROM "Image_tags" WHERE LOWER(tag) LIKE $1)',
+      ['%' + query + '%']
+    );
+    let imgs = imgQuery.rows;
+    
+    const tagQuery = await pool.query(
+      'SELECT * FROM "Image_tags" WHERE img_id in (SELECT img_id FROM "Image_tags" WHERE LOWER(tag) LIKE $1) OR\
+       img_id in (SELECT img_id FROM "Images" WHERE LOWER(name) LIKE $1)',
+      ['%' + query + '%']
+    );
+    const tags = tagQuery.rows;
+
+    // If the image is of any teacher
+    const teacherQuery = await pool.query(
+      'SELECT * FROM "User" INNER JOIN "teachers" ON user_id=teacher_id WHERE img_id = ANY($1)',
+      ["{" + (imgs.map((img) => img.img_id)).toString()+ "}"]
+    );
+    const teachers = teacherQuery.rows;
+
+    // If the image is of any student
+    const studentQuery = await pool.query(
+      'SELECT * FROM "User" INNER JOIN "Students" ON user_id=student_id WHERE img_id = ANY($1)',
+      ["{" + (imgs.map((img) => img.img_id)) + "}"]
+    );
+    const students = studentQuery.rows;
+    
+    if (imgs.length > 0) {
+      const tagObj = combineTagsToAnArray(tags);
+
+      imgs = imgs.map(img => {
+        for(const teacher of teachers) {
+          if(teacher.img_id === img.img_id) {
+            img = {...img, ...teacher};
+          }
+        }
+        for(const student of students) {
+          if(student.img_id === img.img_id) {
+            img = {...img, ...student};
+          }
+        }
+        
+        img.image = byteArrayToBase64(img.image);
+        img.tags = (img.img_id in tagObj) ? tagObj[img.img_id] : [];
+        return img;
+      });
+      res.json(imgs);
+    } else {
+      res.status(500);
+    }
+  } catch (error) {
+    console.error("Error fetching courses:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }  
+});
+
+app.get("/Courses/list/:user_type/:id", async (req, res) => {
+  const { user_type, id } = req.params;
+  try {
+    let coursesQuery;
+    if(user_type === 'student') {
+      coursesQuery = await pool.query(
+        'SELECT name FROM "Courses" NATURAL JOIN "student_courses" WHERE student_id=$1',
+        [id]
+      );
+    } else {
+      coursesQuery = await pool.query(
+        'SELECT DISTINCT name FROM "Courses" WHERE teacher_id=$1',
+        [id]
+      );
+    }
+
     const courses = coursesQuery.rows.map((row) => row.name);
     res.json(courses);
   } catch (error) {
@@ -62,7 +251,7 @@ app.get("/courses", async (req, res) => {
   }
 });
 
-app.get("/courses/:some_course", async (req, res) => {
+app.get("/Courses/:some_course", async (req, res) => {
   const { some_course } = req.params;
   try {
     const yearsQuery = await pool.query(
@@ -77,14 +266,26 @@ app.get("/courses/:some_course", async (req, res) => {
   }
 });
 
-app.get("/courses/:some_course/:year", async (req, res) => {
+app.get("/Courses/:some_course/:year", async (req, res) => {
   const { some_course, year } = req.params;
   try {
     const imagesQuery = await pool.query(
-      'SELECT * FROM "Images" WHERE img_id in (SELECT img_id FROM "course_images" NATURAL JOIN "Courses" WHERE name=$1 AND year=$2);',
+      'SELECT * FROM "Images" WHERE img_id in (SELECT img_id FROM "course_images" NATURAL JOIN "Courses" WHERE name=$1 AND year=$2)',
       [some_course, year]
     );
     const images = imagesQuery.rows;
+
+    const tagQuery = await pool.query(
+      'SELECT * FROM "Image_tags" WHERE img_id in (SELECT img_id FROM "course_images" NATURAL JOIN "Courses" WHERE name=$1 AND year=$2)',
+      [some_course, year]
+    );
+    const tags = tagQuery.rows;
+    const tagObj = combineTagsToAnArray(tags);
+
+    images.map(img => {
+      img.image = byteArrayToBase64(img.image);
+      img.tags = (img.img_id in tagObj) ? tagObj[img.img_id] : [];
+    });
     res.json(images);
   } catch (error) {
     console.error("Error fetching images for course and year:", error);
@@ -92,7 +293,7 @@ app.get("/courses/:some_course/:year", async (req, res) => {
   }
 });
 
-app.get("/events", async (req, res) => {
+app.get("/Events", async (req, res) => {
   try {
     const eventsQuery = await pool.query(
       'SELECT DISTINCT event_name FROM "Events"'
@@ -105,7 +306,7 @@ app.get("/events", async (req, res) => {
   }
 });
 
-app.get("/events/:name", async (req, res) => {
+app.get("/Events/:name", async (req, res) => {
   const { name } = req.params;
   try {
     const yearsQuery = await pool.query(
@@ -120,14 +321,26 @@ app.get("/events/:name", async (req, res) => {
   }
 });
 
-app.get("/events/:name/:year", async (req, res) => {
+app.get("/Events/:name/:year", async (req, res) => {
   const { name, year } = req.params;
   try {
     const imagesQuery = await pool.query(
-      'SELECT * FROM "Images" WHERE users_associated = $1 AND EXTRACT(YEAR FROM tags::date) = $2',
+      'SELECT * FROM "Images" WHERE img_id in (SELECT img_id FROM "Event_Images" NATURAL JOIN "Events" WHERE event_name=$1 AND EXTRACT(year FROM date)=$2);',
       [name, year]
     );
     const images = imagesQuery.rows;
+
+    const tagQuery = await pool.query(
+      'SELECT * FROM "Image_tags" WHERE img_id in (SELECT img_id FROM "Event_Images" NATURAL JOIN "Events" WHERE event_name=$1 AND EXTRACT(year FROM date)=$2);',
+      [name, year]
+    );
+    const tags = tagQuery.rows;
+    const tagObj = combineTagsToAnArray(tags);
+
+    images.map(img => {
+      img.image = byteArrayToBase64(img.image);
+      img.tags = (img.img_id in tagObj) ? tagObj[img.img_id] : [];
+    });
     res.json(images);
   } catch (error) {
     console.error("Error fetching images for event and year:", error);
@@ -135,10 +348,10 @@ app.get("/events/:name/:year", async (req, res) => {
   }
 });
 
-app.get("/classes", async (req, res) => {
+app.get("/Classes", async (req, res) => {
   try {
     const yearsQuery = await pool.query(
-      'SELECT DISTINCT year_of_join FROM "Student"'
+      'SELECT DISTINCT year_of_join FROM "Students"'
     );
     const years = yearsQuery.rows.map((row) => row.year_of_join);
     res.json(years);
@@ -148,11 +361,11 @@ app.get("/classes", async (req, res) => {
   }
 });
 
-app.get("/classes/:year", async (req, res) => {
+app.get("/Classes/:year", async (req, res) => {
   const { year } = req.params;
   try {
     const departmentsQuery = await pool.query(
-      'SELECT DISTINCT branch FROM "Student" WHERE year_of_join = $1',
+      'SELECT DISTINCT branch FROM "Students" WHERE year_of_join = $1',
       [year]
     );
     const departments = departmentsQuery.rows.map((row) => row.branch);
@@ -163,14 +376,40 @@ app.get("/classes/:year", async (req, res) => {
   }
 });
 
-app.get("/classes/:year/:dep", async (req, res) => {
+app.get("/Classes/:year/:dep", async (req, res) => {
   const { year, dep } = req.params;
   try {
     const imagesQuery = await pool.query(
-      'SELECT * FROM "Images" WHERE users_associated = $1 AND tags = $2',
+      'SELECT * FROM "Images" WHERE img_id in (SELECT img_id FROM "Students" INNER JOIN "User" ON student_id=user_id WHERE year_of_join=$1 AND branch=$2)',
       [year, dep]
     );
-    const images = imagesQuery.rows;
+    let images = imagesQuery.rows;
+
+    const tagQuery = await pool.query(
+      'SELECT * FROM "Image_tags" WHERE img_id in (SELECT img_id FROM "Students" INNER JOIN "User" ON student_id=user_id WHERE year_of_join=$1 AND branch=$2)',
+      [year, dep]
+    );
+    const tags = tagQuery.rows;
+    const tagObj = combineTagsToAnArray(tags);
+
+    const studentQuery = await pool.query(
+      'SELECT * FROM "User" INNER JOIN "Students" ON user_id=student_id WHERE img_id = ANY($1)',
+      ["{" + (images.map((img) => img.img_id)) + "}"]
+    );
+    const students = studentQuery.rows;
+ 
+    images = images.map(img => {
+      for(const student of students) {
+        if(student.img_id === img.img_id) {
+          img = {...img, ...student};
+          break;
+        }
+      }
+
+      img.image = byteArrayToBase64(img.image);
+      img.tags = (img.img_id in tagObj) ? tagObj[img.img_id] : [];
+      return img;
+    });
     res.json(images);
   } catch (error) {
     console.error("Error fetching images for department and year:", error);
@@ -178,87 +417,37 @@ app.get("/classes/:year/:dep", async (req, res) => {
   }
 });
 
-
-// app.post('/upload', upload.single('image'), async (req, res) => {
-//   try {
+app.post("/image/:folder/:sub_f1/:sub_f2", async (req, res) => {
+  const { folder, sub_f1, sub_f2 } = req.params;
   
-//     const imageBuffer = req.file.buffer;
+  try {
+    if(folder === "Courses") {
+      const { name, img, description, tags, users_associated, added_by } = req.body;
+      const imgQuery = await pool.query(
+        'INSERT INTO "Images"(users_associated, name, description, image, added_by) VALUES($1, $2, $3, $4, $5)',
+        [users_associated, name, description, base64ToByteArray(img), added_by]
+      );
 
-//     const query = `
-//       INSERT INTO "Images" (added_by ,users_associated, name, tags, description, image)
-//       VALUES
-//       ($1, $2, $3, $4, $5 ,$6)
-//     `;
-//     const values = ['John Wood',
-//       [21108001, 21108002],
-//       'Image1',              
-//       ['tag1', 'tag2'],      
-//       'Description for Image1', 
-//       imageBuffer            
-//     ];
-//     await pool.query(query, values);
+      const imgIdQuery = await pool.query('SELECT MAX(img_id) FROM "Images"');
+      const img_id = imgIdQuery.rows[0].max;
 
-//     res.status(201).json({ message: 'Image uploaded successfully' });
-//   } catch (error) {
-//     console.error('Error uploading image:', error);
-//     res.status(500).json({ error: 'Internal server error' });
-//   }
-// });
+      for(const tag of tags) {
+        const tagQuery = await pool.query('INSERT INTO "Image_tags" VALUES ($1, $2)', [img_id, tag]);
+      }
 
-// app.post('/courses/:course/:year', upload.single('image'), async (req, res) => {
-//   try {
-//     const course = req.params.course;
-//     const year = req.params.year;
-//     const image = req.file.buffer;
-//     const query = `
-//       INSERT INTO "Images" (course, year, image)
-//       VALUES ($1, $2, $3)
-//     `;
-//     await pool.query(query, [course, year, image]);
+      const courseImagesQuery = await pool.query(
+        'INSERT INTO "course_images" VALUES((SELECT course_code FROM "Courses" WHERE name=$1), $2, $3)',
+        [sub_f1, sub_f2, img_id]
+      );
+      const course = courseImagesQuery.rows;
 
-//     res.status(201).json({ message: 'Image added to course successfully' });
-//   } catch (error) {
-//     console.error('Error adding image to course:', error);
-//     res.status(500).json({ error: 'Internal server error' });
-//   }
-// });
-
-// app.post('/events/:name/:year', upload.single('image'), async (req, res) => {
-//   try {
-//     const eventName = req.params.name;
-//     const year = req.params.year;
-//     const image = req.file.buffer;
-//     const query = `
-//       INSERT INTO "Images" (event_name, year, image)
-//       VALUES ($1, $2, $3)
-//     `;
-//     await pool.query(query, [eventName, year, image]);
-
-//     res.status(201).json({ message: 'Image added to event successfully' });
-//   } catch (error) {
-//     console.error('Error adding image to event:', error);
-//     res.status(500).json({ error: 'Internal server error' });
-//   }
-// });
-
-// // Endpoint to add image to a class for a specific year and department
-// app.post('/classes/:year/:dep', upload.single('image'), async (req, res) => {
-//   try {
-//     const year = req.params.year;
-//     const department = req.params.dep;
-//     const image = req.file.buffer;
-//     const query = `
-//       INSERT INTO "Images" (year, department, image)
-//       VALUES ($1, $2, $3)
-//     `;
-//     await pool.query(query, [year, department, image]);
-
-//     res.status(201).json({ message: 'Image added to class successfully' });
-//   } catch (error) {
-//     console.error('Error adding image to class:', error);
-//     res.status(500).json({ error: 'Internal server error' });
-//   }
-// });
+      res.status(200).send("Data stored successfully");
+    }
+  } catch(error) {
+    console.error("Error putting data", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

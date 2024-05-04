@@ -1,6 +1,33 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
-const ImageModal = ({ buttonRef, image }) => {
+const ImageModal = ({ buttonRef, image, setImage }) => {
+  const [users_associated, setUsersAssociated] = useState([]);
+  useEffect(() => {
+    setUsersAssociated([]);
+    if(image?.users_associated?.length > 0 && users_associated?.length < image?.users_associated?.length) {
+      const temp = [];
+      for(const id of image.users_associated) {
+        fetch("http://localhost:4000/user_img/"+id)
+          .then((res) => {
+            if(!res.ok)
+              throw new Error("");
+            return res.json();
+          })
+          .then(res => {
+            temp.push(res);
+            if(temp.length === image.users_associated.length)
+              setUsersAssociated(temp);
+          })
+          .catch((e) => console.log(e));
+      }
+      // console.log(users_associated);
+    }
+  }, [image]);
+
+  function handleAssociatedUserClick(idx) {
+    setImage(users_associated[idx]);
+  }
+
   return (
     <div>
       <button
@@ -40,29 +67,49 @@ const ImageModal = ({ buttonRef, image }) => {
               <div className="d-flex align-items-center h-100">
                 <div className="w-75">
                   <img
-                    src="https://oeshighschool.com/wp-content/uploads/2021/12/Dec-Blog-Post-2.png"
-                    alt="img"
-                    className="d-block mx-auto mw-100"
+                    src={"data:image/jpeg;base64," + image.image}
+                    alt={image.name}
+                    className="d-block mx-auto mw-100 main-modal-img"
                   />
                 </div>
                 <div className="h-100 w-25 d-flex flex-column justify-content-evenly px-2">
-                  <p className="display-4">{image.name}</p>
-                  {image.description !== "" && (
-                    <p className="fs-5">Description: {image.description}</p>
+                  <div>
+                    <p className="display-4">{image.name}</p>
+                    {image.description !== "" && (
+                      <p className="fs-6">Description: {image.description}</p>
+                    )}
+                  </div>
+                  {("user_id" in image) && (
+                    <>
+                      <p className="fs-6">User Id: {image.user_id}</p>
+                      <p className="fs-6">E-Mail Id: {image.mail}</p>
+                      {("grades" in image) ? (
+                        <>
+                        <p className="fs-6">Branch: {image.branch}</p>
+                        <p className="fs-6">Year of join: {image.year_of_join}</p>
+                        <p className="fs-6">Grades: {image.grades}</p>
+                        </>
+                      ) : (
+                        <p className="fs-6">Qualification: {image.qualification}</p>
+                      )}
+                    </>
                   )}
-                  {image.tags.length > 0 && (
+                  {image?.tags?.length > 0 && (
                     <p className="fs-5">Tags: {image.tags.join(", ")}</p>
                   )}
-                  {image.users_associated.length === 0 && (
+                  {users_associated.length > 0 && (
                     <div>
                       <p className="fs-5 mb-0">Users in image</p>
                       <div className="overflow-x-auto d-flex">
-                        {[1, 2, 3, 4].map((user) => (
+                        {users_associated.map((user, idx) => (
                           <img
-                            src="https://thumbs.dreamstime.com/b/cute-man-face-cartoon-cute-man-face-cartoon-vector-illustration-graphic-design-135024353.jpg"
+                            src={"data:image/jpeg;base64," + user.image}
                             width="80px"
+                            height="70px"
                             className="px-2 border border-dark"
                             alt="user"
+                            key={idx}
+                            onClick={() => handleAssociatedUserClick(idx)}
                           />
                         ))}
                       </div>

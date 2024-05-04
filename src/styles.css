@@ -25,8 +25,24 @@
   font-size: 20px;
 }
 
+.main-container {
+  min-height: 300px;
+  max-height: 480px;
+  overflow-y: auto;
+  width: 54%;
+}
+
+.img-card img {
+  min-height: 250px;
+  max-height: 300px;
+}
+
 #imageModal .modal-body {
   height: 83vh;
+}
+
+#imageModal .main-modal-img {
+  max-height: 80vh;
 }
 
 #imageAddForm .imgArea {

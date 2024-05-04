@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 
-const ImageAddModal = ({buttonRef}) => {
+const ImageAddModal = ({buttonRef, user, params}) => {
     const [image, setImage] = useState("");
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
@@ -20,7 +20,8 @@ const ImageAddModal = ({buttonRef}) => {
             const imgString = i.target.result;
             const base64Img = imgString.slice(imgString.indexOf(",") + 1);
             // console.log(base64Img);
-            setImage(imgString);
+            convertToJPEG(imgString);
+            // setImage(imgString);
         }
     
         reader.readAsDataURL(inputButtonRef.current?.files[0]);
@@ -29,12 +30,12 @@ const ImageAddModal = ({buttonRef}) => {
     function handleSubmit(e) {
         e.preventDefault();
         setDataToPost({
-            src: image,
+            img: image.slice(image.indexOf(",") + 1),
             name: title,
             description: description,
             tags: tags.split(','),
-            added_by: "",
-            users_associated: [],
+            added_by: user.user_id,
+            users_associated: null,
         });
         setToDefault();
     }
@@ -46,17 +47,35 @@ const ImageAddModal = ({buttonRef}) => {
         setTags("");
     }
 
+    function convertToJPEG(imgURL) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        
+        img.onload = () => {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+    
+          // Convert canvas to JPEG
+          const jpegDataURL = canvas.toDataURL('image/jpeg');
+          setImage(jpegDataURL);
+        };
+    
+        img.src = imgURL;
+    };
+
     useEffect(() => {
         async function postData() {
             if(Object.keys(dataToPost).length > 0) {
-                const response = await fetch("http://localhost:3000/image", {
+                const response = await fetch("http://localhost:4000/image/" + params.join("/"), {
                     method: "POST",
                     mode: "cors",
                     headers: {"Content-Type": "application/json"},
                     body: JSON.stringify(dataToPost)
                 });
     
-                if(response.status != 200)
+                if(response.status !== 200)
                     alert("Upload failed");
             }
         }

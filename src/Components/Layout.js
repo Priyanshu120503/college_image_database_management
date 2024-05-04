@@ -1,7 +1,7 @@
 import React from "react";
 import { Outlet, Link } from "react-router-dom";
 
-const Layout = ({ isLoggedIn, images, courses }) => {
+const Layout = ({ isLoggedIn }) => {
   return (
     <div>
       <nav class="navbar navbar-expand-lg bg-light border-bottom border-body">
@@ -35,17 +35,17 @@ const Layout = ({ isLoggedIn, images, courses }) => {
                   </Link>
                 </li>
                 <li class="nav-item">
-                  <Link class="nav-link" to="/main/courses">
+                  <Link class="nav-link" to="/main/Courses">
                     Courses
                   </Link>
                 </li>
                 <li class="nav-item">
-                  <Link class="nav-link" to="/main/classes">
+                  <Link class="nav-link" to="/main/Classes">
                     Classes
                   </Link>
                 </li>
                 <li class="nav-item">
-                  <Link class="nav-link" to="/main/events">
+                  <Link class="nav-link" to="/main/Events">
                     Events
                   </Link>
                 </li>

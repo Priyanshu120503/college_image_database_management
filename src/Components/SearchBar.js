@@ -1,28 +1,32 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
-const SearchBar = ({ images, onSearch }) => {
+const SearchBar = ({ onSearch }) => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearch = (e) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    const filteredResults = filterImages(query);
-    onSearch(filteredResults);
+    setSearchQuery(e.target.value);
   };
 
-  const filterImages = (query) => {
-    if (query === "") return [];
+  useEffect(() => {
+    if(searchQuery === "") {
+      onSearch([]);
+    }
+    else {
+      const delay = setTimeout(() => {
+        fetch('http://localhost:4000/find_imgs/'+searchQuery.toLowerCase())
+          .then((res) => {
+            if(!res.ok)
+              throw new Error("Failed");
+            return res.json();
+          })
+          .then((res) => {console.log(res.length); onSearch(res)})
+          .catch((e) => console.log(e));
+      }, 300); // Adjust the debounce time as needed (300 milliseconds in this example)
+  
+      return () => clearTimeout(delay); // Cleanup function to clear timeout
+    }
+  }, [searchQuery]);
 
-    return Object.values(images).filter((image) => {
-      if (image.name.toLowerCase().includes(query.toLowerCase())) return true;
-
-      for (const tag of image.tags) {
-        if (tag.toLowerCase().includes(query.toLowerCase())) return true;
-      }
-
-      return false;
-    });
-  };
 
   return (
     <div className="text-center w-50 mx-auto searchBar">
